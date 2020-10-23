@@ -1,7 +1,11 @@
-# scientific computation
+# scientific computing
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import optimize
+from scipy.stats import multivariate_normal
+
+import matplotlib
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
 
 # torch package
 import torch
@@ -12,9 +16,7 @@ from torchvision import models
 
 '''
 Berardino, A., Laparra, V., Ballé, J., & Simoncelli, E. (2017)
-    - Fisher Information Matrix, Distance Metric
-    - Calculate Fisher Information w.r.t. Scalar Variable
-    - Derivatives; Chain Rule; Autograd Implementation
+    - Fisher Information Matrix, Distance Metric    
     
 Gal, Y., & Ghahramani, Z. (2016)
     - Deep Gaussian Process
@@ -22,7 +24,11 @@ Gal, Y., & Ghahramani, Z. (2016)
     - Dropout/"Noise" as approximate inference
 
 Sampling/Inference when noise is presented/with efficient population
+
+* plot the likelihood function based on gaussian internal noise
+* p(r|f(theta)): "mapping" to homogeneous internal space; efficient coding (NN2015)
 '''
+
 
 def generate_gabor(sz, A, omega, theta, func=torch.cos, K=np.pi):
     radius = (int(sz[0] / 2.0), int(sz[1] / 2.0))
@@ -36,8 +42,7 @@ def generate_gabor(sz, A, omega, theta, func=torch.cos, K=np.pi):
     gauss = omega ** 2 / (4 * np.pi * K ** 2) * torch.exp(- omega ** 2 / (8 * K ** 2) * (4 * x1 ** 2 + y1 ** 2))
     sinusoid = A * func(omega * x1) * torch.exp(torch.tensor(K ** 2 / 2))
 
-    gabor = gauss * sinusoid
-    return gabor
+    return gauss * sinusoid
 
 
 def rgb_gabor(theta):
@@ -55,7 +60,7 @@ def gen_sinusoid(sz, A, omega, rho):
                              torch.tensor(range(-radius[1], radius[1]))])
     x = x.float()
     y = y.float()
-    stimuli = A * torch.cos(0.4 * omega[0] * x + 0.4 * omega[1] * y + rho)
+    stimuli = A * torch.cos(0.35 * omega[0] * x + 0.35 * omega[1] * y + rho)
     return stimuli
 
 
@@ -87,7 +92,6 @@ class ConvNet(models.AlexNet):
                 return x.view(x.size()[0], -1)
             x = layer(x)
 
-
     def orientation_response(self, theta, layer_idx):
         stimulus = self.generator(torch.tensor(theta))
         return self.feedforward(stimulus, layer_idx)
@@ -116,30 +120,6 @@ class ConvNet(models.AlexNet):
         return nn.modules.distance.CosineSimilarity()(plus, minus).item()
 
 
-class Estimator:
-    def __init__(self, model, layer_idx):
-        self.model = model
-        self.layer_idx = layer_idx
-
-    # return an MLE estimate of theta given response
-    def mle(self, response, lb=0, ub=np.pi):
-        objective = lambda theta: self.model.orientation_loss(response, theta, self.layer_idx)
-        return optimize.fminbound(objective, lb, ub, disp=1)
-
-    # calculate bias and variance of the MLE estimator
-    def mle_eval(self, mean_response):
-        pass
-
-
-def plot_res():
-    theta_range = np.linspace(0.0, np.pi, 50)
-    var_est = np.load('./sim_data/data_std_iter2000_01.npy')
-
-    plt.plot(theta_range / np.pi, var_est, 'o-')
-    plt.title('std of the estimate')
-    plt.show()
-
-
 def plot_fisher(layer_idx=0, normalize=True):
     model_urls = {'alexnet': 'http://download.pytorch.org/models/alexnet-owt-4df8aa71.pth', }
     nn_model = ConvNet(rgb_sinusoid)
@@ -153,8 +133,8 @@ def plot_fisher(layer_idx=0, normalize=True):
         theta_image = theta_image / np.sum(theta_image)
         theta_fisher = theta_fisher / np.sum(theta_fisher)
 
-    plt.plot(theta_range / np.pi, np.sqrt(theta_image), 'o-')
-    plt.plot(theta_range / np.pi, np.sqrt(theta_fisher), 'o-')
+    plt.plot(theta_range / np.pi * 180, np.sqrt(theta_image), 'o-')
+    plt.plot(theta_range / np.pi * 180, np.sqrt(theta_fisher), 'o-')
     plt.show()
 
 
@@ -170,9 +150,55 @@ def plot_cos_sim(layer_idx=0):
     plt.show()
 
 
+class Estimator:
+    def __init__(self, model, layer_idx):
+        self.model = model
+        self.layer_idx = layer_idx
+
+    # return an MLE estimate of theta given response
+    def mle(self, response, lb=0, ub=np.pi):
+        objective = lambda theta: self.model.orientation_loss(response, theta, self.layer_idx)
+        return optimize.fminbound(objective, lb, ub, disp=1)
+
+    # calculate the (full shape of) likelihood function given a response vector
+    def log_llhd(self, response, noise_var, lb, ub):
+        theta_range = np.linspace(lb, ub, 200)
+        llhd = np.zeros(theta_range.size)
+        for idx, theta in enumerate(theta_range):
+            mean_res = self.model.orientation_response(theta, self.layer_idx).detach().numpy().flatten()
+            llhd_idpd = np.array([multivariate_normal.pdf(response[dim], mean_res[dim], noise_var)
+                                  for dim in range(response.size)])
+            llhd[idx] = np.sum(np.log(llhd_idpd))
+
+        return theta_range, llhd
+
+
+def plot_likelihood(theta=0, layer_idx=3):
+    model_urls = {'alexnet': 'http://download.pytorch.org/models/alexnet-owt-4df8aa71.pth', }
+    nn_model = ConvNet(rgb_sinusoid)
+    nn_model.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
+    estimator = Estimator(nn_model, layer_idx=layer_idx)
+
+    # noisy response
+    response = nn_model.orientation_response(theta, layer_idx).detach().numpy().flatten()
+    theta_range, llhd = estimator.log_llhd(response, 10, theta - np.pi * 0.25, theta + np.pi * 0.25)
+
+    plt.plot(theta_range / np.pi, llhd)
+    plt.show()
+
+
+def plot_res():
+    theta_range = np.linspace(0.0, np.pi, 50)
+    var_est = np.load('./sim_data/data_std_iter2000_01.npy')
+
+    plt.plot(theta_range / np.pi, var_est, 'o-')
+    plt.title('std of the estimate')
+    plt.show()
+
+
 def main():
     model_urls = {'alexnet': 'http://download.pytorch.org/models/alexnet-owt-4df8aa71.pth', }
-    nn_model = ConvNet(rgb_gabor)
+    nn_model = ConvNet(rgb_sinusoid)
     nn_model.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
     estimator = Estimator(nn_model, layer_idx=3)
 
@@ -203,3 +229,4 @@ def main():
 
 if __name__ == '__main__':
     plot_fisher(layer_idx=3, normalize=True)
+    # plot_likelihood(theta=np.pi*0.5)
