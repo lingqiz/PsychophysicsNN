@@ -2,9 +2,6 @@
 import numpy as np
 from scipy import optimize
 from scipy.stats import multivariate_normal
-
-import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
 # torch package
