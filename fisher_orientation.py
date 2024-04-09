@@ -1,8 +1,6 @@
 # scientific computing
 import numpy as np
-import matplotlib
 import scipy.io as sio
-
 import matplotlib.pyplot as plt
 
 # torch package
