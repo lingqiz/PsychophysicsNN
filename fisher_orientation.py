@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib
 import scipy.io as sio
 
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
 # torch package
@@ -12,12 +11,11 @@ import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 from torchvision import models
 
-
 from stimulus import *
 
 '''
 Berardino, A., Laparra, V., Ballé, J., & Simoncelli, E. (2017)
-    - Fisher Information Matrix, Distance Metric    
+    - Fisher Information Matrix, Distance Metric
 
 Gal, Y., & Ghahramani, Z. (2016)
     - Deep Gaussian Process
@@ -187,8 +185,8 @@ if __name__ == '__main__':
 
     # Center surround stimulus
     theta_range = np.linspace(0.0, np.pi, 80)
-    fish_info_control = np.sqrt(plot_fisher(rgb_sine_noise, layer_idx=4, normalize=False, reference=False))
-    fish_info_exp = np.sqrt(plot_fisher_center_surround(torch.tensor(np.pi * 0.5), layer_idx=4, normalize=True, reference=False))
+    fish_info_control = np.sqrt(plot_fisher(rgb_sine_noise, layer_idx=4, normalize=True, reference=False))
+    fish_info_exp = np.sqrt(plot_fisher_center_surround(torch.tensor(np.pi * 0.25), layer_idx=4, normalize=True, reference=False))
 
     plt.plot(theta_range / np.pi * 180, fish_info_exp - fish_info_control, 'o-')
     plt.xlabel('Orientation (Degree)')
