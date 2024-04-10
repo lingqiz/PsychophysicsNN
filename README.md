@@ -1,1 +1,1 @@
-# psychophysics-nn
+Running psychophysics on Conv Nets
