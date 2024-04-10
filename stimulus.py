@@ -69,7 +69,7 @@ def rgb_sine_aperture(theta):
 
 def rgb_sine_noise(theta, rho=0, freq=0.35):
     output = torch.zeros(1, 3, STIM_SIZE, STIM_SIZE)
-    sin_stim = sinsoid_noise(ratio=0.60, sz=STIM_SIZE, A=1,
+    sin_stim = sinsoid_noise(ratio=0.75, sz=STIM_SIZE, A=1,
                              omega=[torch.cos(theta), torch.sin(theta)],
                              rho=rho, freq=freq)
 

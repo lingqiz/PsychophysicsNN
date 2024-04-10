@@ -21,7 +21,7 @@ def fisher(model, theta):
     return torch.mm(df_dtheta, df_dtheta.transpose(0, 1)).item()
 
 def compute_fisher(model, normalize=True):
-    theta_range = np.linspace(0.0, np.pi, 90)
+    theta_range = np.linspace(0.0, np.pi, 45)
     theta_fisher = np.array([fisher(model, theta) for theta in theta_range])
     theta_fisher = np.sqrt(theta_fisher)
 
@@ -57,9 +57,9 @@ class AlexNet(models.AlexNet):
         Compute response to an orientation stimulus
         '''
         stimulus = self.generator(torch.tensor(theta))
-
         # compute the response to the orientation stimulus
         if self.layer_idx == -1:
             return self.feature_layer(stimulus)
+
         else:
             return self.feedforward(stimulus, self.layer_idx)
