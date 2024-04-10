@@ -67,11 +67,11 @@ def rgb_sine_aperture(theta):
 
     return output
 
-def rgb_sine_noise(theta, freq=0.35):
+def rgb_sine_noise(theta, rho=0, freq=0.35):
     output = torch.zeros(1, 3, STIM_SIZE, STIM_SIZE)
-    sin_stim = sinsoid_noise(ratio=0.75, sz=STIM_SIZE, A=1,
+    sin_stim = sinsoid_noise(ratio=0.60, sz=STIM_SIZE, A=1,
                              omega=[torch.cos(theta), torch.sin(theta)],
-                             rho=0, freq=freq)
+                             rho=rho, freq=freq)
 
     # fill in the RGB channels
     for idx in range(3):
@@ -79,12 +79,12 @@ def rgb_sine_noise(theta, freq=0.35):
 
     return output
 
-def rgb_center_surround(theta_center, theta_surround, freq=0.35):
+def rgb_center_surround(theta_center, theta_surround, rho=0, freq=0.35):
     output = torch.zeros(1, 3, STIM_SIZE, STIM_SIZE)
-    stimulus = center_surround(ratio=0.75,sz=STIM_SIZE,
+    stimulus = center_surround(ratio=0.60, sz=STIM_SIZE,
                                theta_center=theta_center,
                                theta_surround=theta_surround,
-                               A=1, rho=0, freq=freq)
+                               A=1, rho=rho, freq=freq)
 
     # fill in the RGB channels
     for idx in range(3):
