@@ -22,7 +22,7 @@ def fisher(model, theta):
     return torch.mm(df_dtheta, df_dtheta.transpose(0, 1)).item()
 
 def compute_fisher(model, normalize=True):
-    theta_range = np.linspace(0.0, np.pi, 45)
+    theta_range = np.linspace(0.0, np.pi, 49)
     theta_fisher = np.array([fisher(model, theta) for theta in theta_range])
     theta_fisher = np.sqrt(theta_fisher)
 
